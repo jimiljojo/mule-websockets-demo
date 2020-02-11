@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:websocket="http://www.mulesoft.org/schema/mule/websocket" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/websocket http://www.mulesoft.org/schema/mule/websocket/current/mule-websocket.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="64fa4fa5-6f75-4279-a8ba-6dcc3116085b" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<websocket:config name="WebSockets_Config" doc:name="WebSockets Config" doc:id="a82e9e29-0437-4721-b59c-acb478f33f14" >
+		<websocket:connection >
+			<websocket:server-settings listenerConfig="HTTP_Listener_config" />
+		</websocket:connection>
+	</websocket:config>
+	<salesforce:sfdc-config name="Salesforce_Config" doc:name="Salesforce Config" doc:id="13a550bf-6091-41aa-bdfc-35d6d8905443" >
+		<salesforce:cached-basic-connection username="${sfdc.username}" password="${sfdc.pass}" />
+	</salesforce:sfdc-config>
+	<configuration-properties doc:name="Configuration properties" doc:id="9a7889fa-1d02-4247-9582-1f595967b430" file="config.properties" />
+	<flow name="ws-demoFlow" doc:id="a231c9c3-53c1-47e1-95ee-2991c7ee2fd1" >
+		<http:listener doc:name="Listen on /" doc:id="d6a2ab69-7ce5-44d6-9c80-f60f77771127" config-ref="HTTP_Listener_config" path="/"/>
+		<http:load-static-resource doc:name="Load index.html" doc:id="78cfff5a-1dc8-4a42-96bc-5244d85b1146" resourceBasePath='${app.home}/index.html'/>
+	</flow>
+	<flow name="open-socket-flow" doc:id="8d3cc7f7-2795-4f3c-9ec9-ebfa48c4cd45" >
+		<websocket:inbound-listener path="/inbound" config-ref="WebSockets_Config" doc:name="Open /inbound"/>
+		<logger level="INFO" doc:name="Log connection" doc:id="3bcdebfc-5dbe-4085-a80b-dd288677021f" message='#["Inbound message received: " ++ payload]'/>
+	</flow>
+	<flow name="brodcast-changeevent-socket" doc:id="e164a2dc-a5a5-49ff-af0e-d82d5214a6ec" >
+		<salesforce:subscribe-channel streamingChannel="/data/ChangeEvents" doc:name="Subscribe all ChangeEvents" doc:id="ec2817ef-3798-4eea-b357-c4835368a63e" config-ref="Salesforce_Config"/>
+		<ee:transform doc:name="Transform 2 JSON" doc:id="c42c9822-119a-4bac-9ee1-4a83b81f736f" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<websocket:broadcast doc:name="Broadcast Payload" doc:id="b3e2e706-4573-40a3-a46a-8f38e73d20de" config-ref="WebSockets_Config" path="/inbound"/>
+	</flow>
+</mule>

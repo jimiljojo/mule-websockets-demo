@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+  <head>   
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <title>SFDC WebSockets Demo</title>
+  </head>
+  <body>
+      <h3>Send outbound message to mule app:</h3>
+      <br/>
+  	<form>
+  		Enter your message here: <input type="text" id="inputext"/>
+          <button id="sendmsg">Send!!!</button>
+      </form>
+      <br/>
+      <br/>
+    <h3>SFDC Events will be streaming via websockets below:</h3><br/>
+    <table id="json" class="table">
+    </table>
+    <script>
+            ws = new WebSocket("ws://"+ document.location.hostname +":8081/inbound");
+            ws.onopen = function(event) {
+                ws.send("Connected!");
+            };
+            ws.onmessage = function(event){      
+                var eventData = '<tr><td><pre>'+event.data+'</pre></td></tr>';      
+                document.getElementById("json").innerHTML += (eventData);
+            };
+            
+            document.getElementById("sendmsg").addEventListener("click", function(){
+                var message = document.getElementById("inputext").value;
+                ws.send(message);
+              });
+    </script>  
+  </body>
+ 
+</html>
